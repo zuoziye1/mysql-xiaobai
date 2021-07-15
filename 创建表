@@ -1,0 +1,70 @@
+
+-- 1、使用数据库：
+use aws_test ;
+
+-- 2、在该库下面创建表
+
+-- 建表建议和规范：
+-- 每个字段最好加上not null ，以及默认值，并且字段和表也加上comment，方便别人查看和维护
+-- 一般每个表都需要有创建时间和修改时间两个字段，是标识当前数据的创建时间和修改的时间
+-- 每个表都建议使用自增id 即： `id` bigint(20) NOT NULL AUTO_INCREMENT
+-- 索引根据实际请况来创建，你们可以先不用关注，感兴趣的话，可以问我
+-- 对于关系型数据库建表，要尽量遵循三范式：翻译成白话，就是一个表尽量独立且只描述和自己紧密相关的事，可以自行百度看下，比较拗口，看了不太懂了，我来解释
+-- 说明：然后每个表的一行，其实就是一句话：以record表为例：就是某个机构下面某个人以哪种方式获得或者消费金币了，发生这个动作的时间是什么时候。
+CREATE TABLE `site_basic_message` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL DEFAULT '0' COMMENT '机构名称',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='机构基本信息';
+
+CREATE TABLE `user_basic_message` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL DEFAULT '0' COMMENT '用户名字',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='用户基本信息';
+
+CREATE TABLE `coin_record` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `site_id` bigint(20) NOT NULL DEFAULT '0' COMMENT '机构id',
+  `uid` bigint(20) NOT NULL DEFAULT '0' COMMENT '操作人uid',
+	 type int not null default '0' comment '金币获得或者消费类型：类型id(表coin_type)',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_site_id` (`site_id`) USING BTREE
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='机构的积分明细表';
+
+
+CREATE TABLE `coin_type` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL DEFAULT '' COMMENT '行为类型',
+  `desc` varchar(255) NOT NULL DEFAULT '0' COMMENT '获取金币或者消费金币的详细描述',
+	 num int not null default '0' comment '金币变化数量：获得就是正数：如50 消费就是负数：如-30',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='金币得失类型：即获取金币或者消费金币的行为类型';
+
+-- 3、为表准备一些数据
+-- 直接看表里面的数据吧
+
+-- 4、简单示例：
+-- 可以执行看下效果
+-- 当然这个sql对于你们来说还有点复杂，你们可以一个表一个表去看
+-- 因为要查记录，所以看record表，然后表里记录的是id,id通过别的表可以看到其他详情
+select c.`name` as '机构名称',
+d.`name` as '用户名称',
+b.`name` as '行为类型',
+b.num as '金币数量',
+a.create_time as '创建时间'
+from coin_record a left join coin_type b on a.type = b.id
+left join site_basic_message c on a.site_id = c.id
+left join user_basic_message d on a.uid = d.id
+;
+
+
+
