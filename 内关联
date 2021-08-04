@@ -1,0 +1,168 @@
+1. 内关联解释：
+内关联其实就是将两个表中相同的部分拿出来。
+参考下面这张图片：
+https://baike.baidu.com/pic/%E4%B8%A4%E5%9C%86%E7%9B%B8%E4%BA%A4/18895046/1/b151f8198618367ad68ab8ce21738bd4b31ce5a6?fr=lemma&ct=single#aid=1&pic=b151f8198618367ad68ab8ce21738bd4b31ce5a6
+阴影部分就是最好要拿出来的数据。
+
+2. 准备表
+-- 这里记录着吃早餐的人早上都吃的什么
+CREATE TABLE `morning_eat_record` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL DEFAULT '0' COMMENT '机构id',
+   food varchar(255) not null default '' comment '早饭吃的什么',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='每个人吃早饭记录';
+
+insert into morning_eat_record (user_id,food) values 
+(1,'面包') ,
+(2,'牛奶') ,
+(3,'手抓饼') ,
+(4,'小面') ,
+(5,'粥') ;
+
+-- 记录每个人几点打卡的
+CREATE TABLE `morning_kaoqin_record` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL DEFAULT '0' COMMENT '机构id',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间（也是打卡时间）',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='每个人打卡时间';
+
+INSERT INTO `aws_test`.`morning_kaoqin_record` (`id`, `user_id`, `create_time`, `update_time`) VALUES (1, 1, '2021-08-04 09:12:45', '2021-08-04 22:13:27');
+INSERT INTO `aws_test`.`morning_kaoqin_record` (`id`, `user_id`, `create_time`, `update_time`) VALUES (2, 4, '2021-08-03 09:42:51', '2021-08-04 22:13:33');
+INSERT INTO `aws_test`.`morning_kaoqin_record` (`id`, `user_id`, `create_time`, `update_time`) VALUES (3, 6, '2021-08-04 09:29:57', '2021-08-04 22:14:06');
+INSERT INTO `aws_test`.`morning_kaoqin_record` (`id`, `user_id`, `create_time`, `update_time`) VALUES (4, 3, '2021-08-04 09:33:12', '2021-08-04 22:14:00');
+
+
+3. 开始查询
+我们的目标是：
+查询出来吃了早餐且还没有迟到的人的都有哪些？
+
+3.1 查询出没有迟到的都有哪些人
+
+3.1.1 转化为查询每天9点半以前打卡的人都有哪些，因为时间记录是时间格式，我们需要想办法处理，因此用一个函数 date_format()
+这个函数不用记，用的时候搜下查看下怎么用即可：https://www.w3school.com.cn/sql/func_date_format.asp
+
+我们先来查看下每个人准确的打卡时间按照年月日时分秒来格式化：
+select 
+user_id,DATE_FORMAT(create_time,'%Y') as '年',
+DATE_FORMAT(create_time,'%m') as '月',
+DATE_FORMAT(create_time,'%d') as '日',
+DATE_FORMAT(create_time,'%k') as '时',
+DATE_FORMAT(create_time,'%i') as '分',
+DATE_FORMAT(create_time,'%S') as '秒'
+ from morning_kaoqin_record ;
+ 
+这样，我们便可以用格式化后的时间来区分某人是否迟到：
+-- 查询分为9点以前打卡 或者是 9点以后但是30分钟前打卡的，这样的时间记录为当天打卡不迟到的人
+-- 这里我们称morning_kaoqin_record 表中的数据为B吧，
+-- 那么这里查出来的数据肯定是我们想要的再从里面找出谁吃饭了即可
+-- 分部查比较简单，就不再叙述
+select * from morning_kaoqin_record where DATE_FORMAT(create_time,'%H') < 9 or 
+(DATE_FORMAT(create_time,'%H') = 9 and DATE_FORMAT(create_time,'%i') <= 30) ;
+
+
+3.1.2 正题来了：内关联
+关联就是inner join 
+就是用两个表中都存在的数据来作为联系，把两边都有的数据查出来
+
+简单看下不做任何处理的：
+select * 
+from 
+ morning_eat_record a 
+ inner join morning_kaoqin_record b
+ on a.user_id = b.user_id ;
+ 
+ 思考下这里查出来的这个是什么？
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 答案：
+ 查出来的是吃饭了且打卡了，不管是否迟到
+ 的同学
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 接下来：
+ 我们就可以再过滤出吃了早餐且没迟到的同学了
+ 
+ 方式一：在最后的where里面来限制条件
+ select a.user_id ,
+b.create_time as '打卡时间',
+a.food as '吃的啥'
+from 
+ morning_eat_record a 
+ inner join morning_kaoqin_record b
+ on a.user_id = b.user_id 
+ where 
+ DATE_FORMAT(b.create_time,'%H') < 9 or 
+(DATE_FORMAT(b.create_time,'%H') = 9 and DATE_FORMAT(b.create_time,'%i') <= 30) ;
+
+
+方式二：在join 关联时，将第二个表的不必要的数据过滤掉
+select a.user_id ,
+b.create_time as '打卡时间',
+a.food as '吃的啥'
+from 
+ morning_eat_record a 
+ inner join morning_kaoqin_record b
+ on a.user_id = b.user_id and (DATE_FORMAT(b.create_time,'%H') < 9 or 
+(DATE_FORMAT(b.create_time,'%H') = 9 and DATE_FORMAT(b.create_time,'%i') <= 30)) ;
+
+on后面的数据就是限制条件，a.user_id = b.user_id 这个代表两个表中都有的数据
+
+(DATE_FORMAT(b.create_time,'%H') < 9 or 
+(DATE_FORMAT(b.create_time,'%H') = 9 and DATE_FORMAT(b.create_time,'%i') <= 30)) 
+代表没有迟到
+
+
+
+
+
+课后作业：
+写下有小面的且没有迟到的同学
+
+
+下节预告：左关联和右关联
